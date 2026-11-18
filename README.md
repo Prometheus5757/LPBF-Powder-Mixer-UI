@@ -30,7 +30,7 @@ It runs offline: every library is bundled, and nothing needs installing beyond P
 ### 2. Clone the repository
 
 ```bash
-git clone https://github.com/<your-account>/LPBF-Powder-Mixer-UI.git
+git clone https://github.com/Prometheus5757/LPBF-Powder-Mixer-UI.git
 cd LPBF-Powder-Mixer-UI
 ```
 

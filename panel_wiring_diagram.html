@@ -1,0 +1,771 @@
+<title>LPBF Mixer Panel Wiring</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a bench-mat "stage" holding a top-down render of the TAMU FORGE panel, then reference cards keyed to the same wire colours. */
+:root {
+  --bg: #eceff1;
+  --surface: #f7f9fa;
+  --stage: #dfe4e7;
+  --stage-dot: #c9d0d5;
+  --fg: #151a1e;
+  --muted: #5a6670;
+  --line: #ccd4da;
+  --accent: #b8322a;
+  --accent-soft: #f3dcda;
+  --label: #2a3237;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* physical colours of the build (same in both themes: it is a render of an object) */
+  --panel: #d6d2c8;
+  --panel-hi: #e2ded5;
+  --panel-edge: #aba697;
+  --panel-side: #bdb8ab;
+  --panel-ink: #b4ae9f;
+  --recess: #c9c4b8;
+  --bb: #f3f1ec;
+  --bb-edge: #d3cfc5;
+  --hole: #5b5a57;
+  --ramps: #c42c25;
+  --ramps-dark: #9a1f1a;
+  --mega: #1f6aa5;
+  --pololu: #2f7d43;
+  --silk: #f7f0e6;
+  --lcd-pcb: #2c7a3c;
+  --lcd-screen: #2a49c9;
+  --lcd-text: #e3ebff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101416;
+    --surface: #161b1e;
+    --stage: #0c1012;
+    --stage-dot: #1f262a;
+    --fg: #e4e8eb;
+    --muted: #94a0a9;
+    --line: #283035;
+    --accent: #ee665c;
+    --accent-soft: #3a1d1b;
+    --label: #c9d1d7;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101416;
+  --surface: #161b1e;
+  --stage: #0c1012;
+  --stage-dot: #1f262a;
+  --fg: #e4e8eb;
+  --muted: #94a0a9;
+  --line: #283035;
+  --accent: #ee665c;
+  --accent-soft: #3a1d1b;
+  --label: #c9d1d7;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 28px;
+}
+header { display: grid; gap: 6px; }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(26px, 3.4vw, 36px); font-weight: 600; letter-spacing: -.01em; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; }
+.lede { color: var(--muted); max-width: 74ch; margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips .lbl { font: 500 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.chip {
+  font: 500 13px/1 var(--font-body);
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.chip:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stage {
+  background-color: var(--stage);
+  background-image: radial-gradient(var(--stage-dot) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.stage svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.readout { min-height: 24px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.readout b { color: var(--fg); font-weight: 500; }
+
+#render .net { transition: opacity .15s ease; }
+#render.focusing .net:not(.on) { opacity: .1; }
+#render .hit { cursor: pointer; }
+
+.grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+.card svg { width: 100%; height: auto; display: block; }
+.split { display: grid; gap: 20px; grid-template-columns: minmax(260px, 340px) 1fr; align-items: start; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+.tablewrap { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th {
+  text-align: left;
+  font: 500 11px/1.2 var(--font-mono);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.mono { white-space: nowrap; }
+tbody tr[data-net]:hover, tbody tr.on { background: var(--accent-soft); }
+.sw { display: inline-block; width: 26px; height: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,.35); vertical-align: middle; }
+.grp td {
+  font: 600 12px/1 var(--font-mono);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--accent);
+  padding-top: 16px; border-bottom: none;
+}
+ul.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+ul.notes b { color: var(--fg); font-weight: 600; }
+.sch-stroke { stroke: var(--fg); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sch-text { fill: var(--fg); font: 500 12px var(--font-mono); }
+.sch-muted { fill: var(--muted); font: 400 11px var(--font-mono); }
+.sch-dot { fill: var(--fg); }
+@media (prefers-reduced-motion: reduce) { #render .net { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">TAMU FORGE · LPBF powder mixer · control panel</div>
+    <h1>Panel wiring: Mega + RAMPS 1.4</h1>
+    <p class="lede">Top view of the printed base plate with every jumper drawn. The RAMPS layout follows the board's silkscreen: drivers lie horizontally, the X/Y/Z/E0 motor headers carry B−, B+, A+, A−, and AUX-2 is the 2 × 5 block on the bottom edge. Hover a wire or table row to trace it. Use the close-up views to read pin labels.</p>
+  </header>
+
+  <figure>
+    <div class="toolbar">
+      <div class="chips" role="group" aria-label="Show subsystem">
+        <span class="lbl">Show</span>
+        <button class="chip" id="f-all" data-group="all" aria-pressed="true">Everything</button>
+        <button class="chip" id="f-pots" data-group="pots" aria-pressed="false">Potentiometers</button>
+        <button class="chip" id="f-buttons" data-group="buttons" aria-pressed="false">Push buttons</button>
+        <button class="chip" id="f-power" data-group="power" aria-pressed="false">5 V / GND / 12 V</button>
+        <button class="chip" id="f-lcd" data-group="lcd" aria-pressed="false">LCD (I²C)</button>
+        <button class="chip" id="f-motors" data-group="motors" aria-pressed="false">Stepper motors</button>
+      </div>
+      <div class="chips" role="group" aria-label="View">
+        <span class="lbl">View</span>
+        <button class="chip" id="v-whole" data-view="whole" aria-pressed="true">Whole panel</button>
+        <button class="chip" id="v-ramps" data-view="ramps" aria-pressed="false">RAMPS close-up</button>
+        <button class="chip" id="v-bb" data-view="bb" aria-pressed="false">Breadboard close-up</button>
+      </div>
+    </div>
+    <div class="stage">
+      <svg id="render" viewBox="-64 4 900 520" role="img" aria-label="Top-down render of the control panel: Arduino Mega with RAMPS 1.4 and four horizontal A4988 drivers, breadboard with two push buttons, four potentiometers, a 16x2 I2C LCD, and every connecting wire drawn as straight runs."></svg>
+    </div>
+    <div class="readout" id="readout" aria-live="polite">Hover any wire to read its connection.</div>
+  </figure>
+
+  <section class="card" style="gap:6px">
+    <h2>Connection list</h2>
+    <div class="tablewrap">
+      <table id="nets">
+        <thead><tr><th>Wire</th><th>Signal</th><th>Board header · pin</th><th>Arduino pin</th><th>Goes to</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h3>AUX-2 header (silkscreen order)</h3>
+      <svg id="aux" viewBox="0 0 340 170" role="img" aria-label="AUX-2 2 by 5 header pin map as printed on the RAMPS 1.4"></svg>
+      <p>The header sits on the bottom edge of the board, with the power terminals on the left. Pins are at 2.54 mm pitch. D44 and A12 are free.</p>
+    </section>
+
+    <section class="card">
+      <h3>Input circuits</h3>
+      <svg viewBox="0 0 340 230" role="img" aria-label="Schematic of a potentiometer divider and a push button with 10 kilohm pull-down">
+        <text class="sch-muted" x="14" y="18">POT ×4</text>
+        <text class="sch-text" x="42" y="42">5V</text>
+        <path class="sch-stroke" d="M50 48 V70"/>
+        <rect class="sch-stroke" x="41" y="70" width="18" height="70" rx="2"/>
+        <path class="sch-stroke" d="M50 140 V168 M38 168 H62 M42 174 H58 M46 180 H54"/>
+        <path class="sch-stroke" d="M100 105 H62 M70 99 L61 105 L70 111"/>
+        <text class="sch-text" x="106" y="101">A5 · A9</text>
+        <text class="sch-text" x="106" y="117">A10 · A11</text>
+        <text class="sch-muted" x="14" y="205">left pin 5V · wiper · right GND</text>
+        <text class="sch-muted" x="190" y="18">BUTTON ×2</text>
+        <text class="sch-text" x="222" y="42">5V</text>
+        <path class="sch-stroke" d="M230 48 V68 M230 94 V120"/>
+        <circle class="sch-dot" cx="230" cy="68" r="2.4"/>
+        <circle class="sch-dot" cx="230" cy="94" r="2.4"/>
+        <path class="sch-stroke" d="M230 70 L244 90 M240 80 H252 M246 74 V86"/>
+        <circle class="sch-dot" cx="230" cy="120" r="3"/>
+        <path class="sch-stroke" d="M230 120 H278"/>
+        <text class="sch-text" x="284" y="116">D40</text>
+        <text class="sch-text" x="284" y="132">D42</text>
+        <rect class="sch-stroke" x="222" y="134" width="16" height="36" rx="2"/>
+        <text class="sch-muted" x="244" y="157">10 kΩ</text>
+        <path class="sch-stroke" d="M230 120 V134 M230 170 V182 M218 182 H242 M222 188 H238 M226 194 H234"/>
+        <text class="sch-muted" x="190" y="215">released LOW · pressed HIGH</text>
+      </svg>
+      <p>Wire the buttons active-high and read them with <code>pinMode(pin, INPUT)</code>. On the breadboard, each 10 kΩ pull-down runs from the button's output strip to the bottom GND rail. A short jumper at column 1 bridges that rail to the top one.</p>
+    </section>
+
+    <section class="card">
+      <h3>I²C header → LCD backpack</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Wire</th><th>RAMPS I²C (top → bottom)</th><th>Mega</th><th>Backpack</th></tr></thead>
+          <tbody id="i2c"></tbody>
+        </table>
+      </div>
+      <p>The RAMPS header runs SCL, SDA, GND, 5V from the top, and the backpack runs GND, VCC, SDA, SCL. The two orders are reversed, so the four wires have to cross once between the boards. The LCD takes 5 V from the Mega regulator through D1, which is fine on 12 V but not on 24 V.</p>
+    </section>
+  </div>
+
+  <section class="card" style="gap:14px">
+    <h2>Stepper drivers and motor headers</h2>
+    <div class="split">
+      <svg viewBox="0 0 320 190" role="img" aria-label="Motor header pin order B minus, B plus, A plus, A minus wired to the two coils of a stepper motor">
+        <text class="sch-muted" x="10" y="14">HEADER (L → R)</text>
+        <rect x="16" y="22" width="128" height="18" rx="2" fill="#151515"/>
+        <g font-family="var(--font-mono)" font-size="10" text-anchor="middle">
+          <text x="32" y="56" fill="var(--muted)">2B</text><text x="64" y="56" fill="var(--muted)">2A</text><text x="96" y="56" fill="var(--muted)">1A</text><text x="128" y="56" fill="var(--muted)">1B</text>
+        </g>
+        <path d="M32 31 V150 H200" fill="none" stroke="#2f6fd6" stroke-width="4"/>
+        <path d="M64 31 V122 H200" fill="none" stroke="#d8342c" stroke-width="4"/>
+        <path d="M96 31 V92 H200" fill="none" stroke="#1f1f1f" stroke-width="4"/>
+        <path d="M128 31 V66 H200" fill="none" stroke="#2f9e44" stroke-width="4"/>
+        <g fill="#d9b44a"><rect x="28" y="27" width="8" height="8"/><rect x="60" y="27" width="8" height="8"/><rect x="92" y="27" width="8" height="8"/><rect x="124" y="27" width="8" height="8"/></g>
+        <g font-family="var(--font-mono)" font-size="11" font-weight="500" fill="var(--fg)">
+          <text x="150" y="62">A−</text><text x="150" y="88">A+</text><text x="150" y="118">B+</text><text x="150" y="146">B−</text>
+        </g>
+        <rect x="196" y="40" width="112" height="134" rx="8" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>
+        <path class="sch-stroke" d="M200 66 H210 a6 4 0 0 1 0 8 a6 4 0 0 1 0 8 a6 4 0 0 1 0 8 V92 H200"/>
+        <path class="sch-stroke" d="M200 122 H210 a6 4 0 0 1 0 8 a6 4 0 0 1 0 8 a6 4 0 0 1 0 8 V150 H200"/>
+        <text class="sch-text" x="232" y="83">Coil A</text>
+        <text class="sch-text" x="232" y="139">Coil B</text>
+        <text class="sch-muted" x="204" y="166">17HS15-1684S-PG5</text>
+      </svg>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Socket</th><th>STEP</th><th>DIR</th><th>ENABLE</th><th>Header B− B+ A+ A−</th><th>V<sub>ref</sub> → I<sub>max</sub></th></tr></thead>
+          <tbody id="drv"></tbody>
+        </table>
+      </div>
+    </div>
+    <p style="margin:0;color:var(--muted);font-size:14px">All four sockets hold A4988s. E1 and the servo header are unused. The motor header silkscreen reads 2B 2A 1A 1B, so coil A (1A/1B) is on the right two pins and coil B (2A/2B) on the left two. With V<sub>ref</sub> = 0.45 V, I<sub>max</sub> = 0.45 / (8 × 0.068 Ω) ≈ 0.83 A, about half the motor's 1.68 A rating. Plug the motors in before applying 12 V, and never hot-plug them.</p>
+  </section>
+
+  <section class="card">
+    <h3>What the render assumes</h3>
+    <ul class="notes">
+      <li><b>AUX-2 order:</b> drawn from the RAMPS silkscreen. Top row: GND, A9, D40, D42, A11. Bottom row: 5V, A5, A10, D44, A12. The map in your wiring doc pairs some pins differently (A11 beside D42, A12 beside D44), so check the jumpers on the real header against this layout.</li>
+      <li><b>Pot order:</b> Pot 1 (A5) is the knob nearest the RAMPS, and Pot 4 (A11) is the farthest. Confirm with the verification sketch.</li>
+      <li><b>Breadboard layout:</b> drawn to keep every run straight. The buttons sit just right of AUX-2 and the pull-downs go to the bottom GND rail. Your real breadboard may differ, but the circuit is the same.</li>
+      <li><b>12 V input:</b> shown on the 5 A pair, which feeds the stepper drivers. Your docs don't say which input you used.</li>
+      <li><b>Motor lead colours:</b> black A+, green A−, red B+, blue B−, the usual code for the 17HS15 series. Check your motor's datasheet.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('render');
+  const E = (tag, a = {}, p = svg, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in a) e.setAttribute(k, a[k]);
+    if (text != null) e.textContent = text;
+    p.appendChild(e);
+    return e;
+  };
+  const r1 = n => Math.round(n * 100) / 100;
+  const pt = p => `${r1(p[0])} ${r1(p[1])}`;
+  /* orthogonal polyline with small rounded corners */
+  const ortho = (pts, r = 2.4) => {
+    let d = `M${pt(pts[0])}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const l1 = Math.hypot(x1 - x0, y1 - y0), l2 = Math.hypot(x2 - x1, y2 - y1);
+      const rr = Math.min(r, l1 / 2, l2 / 2);
+      const a = [x1 - (x1 - x0) / l1 * rr, y1 - (y1 - y0) / l1 * rr];
+      const b = [x1 + (x2 - x1) / l2 * rr, y1 + (y2 - y1) / l2 * rr];
+      d += ` L${pt(a)} Q${pt([x1, y1])} ${pt(b)}`;
+    }
+    return d + ` L${pt(pts[pts.length - 1])}`;
+  };
+
+  const C = {
+    red: '#d8342c', black: '#262626', orange: '#f08a1c', yellow: '#e6c01b', green: '#2f9e44',
+    blue: '#2f6fd6', purple: '#8b4fd1', pink: '#e0569b', teal: '#16a2b6', white: '#f1f1ec'
+  };
+  /* motor header pin order left → right: 2B 2A 1A 1B = B− B+ A+ A− */
+  const MOTOR_PINS = [['B−', '#2f6fd6'], ['B+', '#d8342c'], ['A+', '#1f1f1f'], ['A−', '#2f9e44']];
+
+  const NETS = {
+    '5v':  { name: '+5 V rail',   color: C.red,    hdr: 'AUX-2 · bottom row, pin 1', pin: '5V',        to: 'Breadboard + rail → pot left pins, button inputs', group: 'power' },
+    'gnd': { name: 'GND rail',    color: C.black,  hdr: 'AUX-2 · top row, pin 1',    pin: 'GND',       to: 'Breadboard − rail → pot right pins, pull-down rail', group: 'power' },
+    'p1':  { name: 'Pot 1 wiper', color: C.orange, hdr: 'AUX-2 · bottom row, pin 2', pin: 'A5 · D59',  to: 'Pot 1 middle pin', group: 'pots' },
+    'p2':  { name: 'Pot 2 wiper', color: C.yellow, hdr: 'AUX-2 · top row, pin 2',    pin: 'A9 · D63',  to: 'Pot 2 middle pin', group: 'pots' },
+    'p3':  { name: 'Pot 3 wiper', color: C.green,  hdr: 'AUX-2 · bottom row, pin 3', pin: 'A10 · D64', to: 'Pot 3 middle pin', group: 'pots' },
+    'p4':  { name: 'Pot 4 wiper', color: C.blue,   hdr: 'AUX-2 · top row, pin 5',    pin: 'A11 · D65', to: 'Pot 4 middle pin', group: 'pots' },
+    'b1':  { name: 'Button 1',    color: C.purple, hdr: 'AUX-2 · top row, pin 3',    pin: 'D40',       to: 'Button 1 output strip + 10 kΩ to GND', group: 'buttons' },
+    'b2':  { name: 'Button 2',    color: C.pink,   hdr: 'AUX-2 · top row, pin 4',    pin: 'D42',       to: 'Button 2 output strip + 10 kΩ to GND', group: 'buttons' },
+    'scl': { name: 'SCL',         color: C.white,  hdr: 'I²C header · pin 1 (top)',  pin: 'D21',       to: 'Backpack SCL', group: 'lcd' },
+    'sda': { name: 'SDA',         color: C.teal,   hdr: 'I²C header · pin 2',        pin: 'D20',       to: 'Backpack SDA', group: 'lcd' },
+    'lgnd':{ name: 'LCD GND',     color: C.black,  hdr: 'I²C header · pin 3',        pin: 'GND',       to: 'Backpack GND', group: 'lcd' },
+    'l5v': { name: 'LCD VCC',     color: C.red,    hdr: 'I²C header · pin 4',        pin: '5V',        to: 'Backpack VCC', group: 'lcd' },
+    'mx':  { name: 'Motor X',     color: '#4a4a4a', hdr: 'X header · B− B+ A+ A−',   pin: 'STEP D54 · DIR D55 · EN D38', to: 'Stepper motor 1', group: 'motors' },
+    'my':  { name: 'Motor Y',     color: '#4a4a4a', hdr: 'Y header · B− B+ A+ A−',   pin: 'STEP D60 · DIR D61 · EN D56', to: 'Stepper motor 2', group: 'motors' },
+    'mz':  { name: 'Motor Z',     color: '#4a4a4a', hdr: 'Z header · B− B+ A+ A−',   pin: 'STEP D46 · DIR D48 · EN D62', to: 'Stepper motor 3', group: 'motors' },
+    'me0': { name: 'Motor E0',    color: '#4a4a4a', hdr: 'E0 header · B− B+ A+ A−',  pin: 'STEP D26 · DIR D28 · EN D24', to: 'Stepper motor 4', group: 'motors' },
+    '12v': { name: '12 V DC in',  color: C.red,    hdr: 'Power terminal · 5A + / −', pin: '—',         to: 'From the 12 V PSU', group: 'power' }
+  };
+
+  const tag = (el, nets, groups) => {
+    el.classList.add('net');
+    el.dataset.nets = nets;
+    el.dataset.groups = groups;
+    return el;
+  };
+
+  /* ---------- defs ---------- */
+  const defs = E('defs');
+  const sh = E('filter', { id: 'shadow', x: '-5%', y: '-5%', width: '115%', height: '120%' }, defs);
+  E('feDropShadow', { dx: 3, dy: 6, stdDeviation: 6, 'flood-color': '#000', 'flood-opacity': .28 }, sh);
+  const sh2 = E('filter', { id: 'lift', x: '-10%', y: '-10%', width: '130%', height: '130%' }, defs);
+  E('feDropShadow', { dx: 1, dy: 1.6, stdDeviation: 1.2, 'flood-color': '#000', 'flood-opacity': .35 }, sh2);
+  const pg = E('linearGradient', { id: 'panelGrad', x1: 0, y1: 0, x2: 1, y2: 1 }, defs);
+  E('stop', { offset: 0, 'stop-color': 'var(--panel-hi)' }, pg);
+  E('stop', { offset: 1, 'stop-color': 'var(--panel)' }, pg);
+  const ll = E('pattern', { id: 'layers', width: 6, height: 2.2, patternUnits: 'userSpaceOnUse' }, defs);
+  E('rect', { width: 6, height: 1, fill: '#000', opacity: .035 }, ll);
+  const mg = E('radialGradient', { id: 'metal', cx: .38, cy: .35, r: .7 }, defs);
+  E('stop', { offset: 0, 'stop-color': '#f2f3f4' }, mg);
+  E('stop', { offset: .55, 'stop-color': '#b9bdc2' }, mg);
+  E('stop', { offset: 1, 'stop-color': '#7d8288' }, mg);
+  const hs = E('linearGradient', { id: 'sink', x1: 0, y1: 0, x2: 1, y2: 1 }, defs);
+  E('stop', { offset: 0, 'stop-color': '#e6e8ea' }, hs);
+  E('stop', { offset: 1, 'stop-color': '#9ea3a8' }, hs);
+  const cap = E('radialGradient', { id: 'cap', cx: .4, cy: .35, r: .7 }, defs);
+  E('stop', { offset: 0, 'stop-color': '#5fd27e' }, cap);
+  E('stop', { offset: 1, 'stop-color': '#1f7a3a' }, cap);
+  const capR = E('radialGradient', { id: 'capRed', cx: .4, cy: .35, r: .7 }, defs);
+  E('stop', { offset: 0, 'stop-color': '#ff8a80' }, capR);
+  E('stop', { offset: 1, 'stop-color': '#a3221c' }, capR);
+
+  const L = {};
+  ['base', 'boards', 'parts', 'wires', 'top', 'labels'].forEach(n => L[n] = E('g', { 'data-layer': n }));
+
+  /* ---------- panel ---------- */
+  E('rect', { x: 47, y: 54, width: 761, height: 455, rx: 4, fill: 'var(--panel-side)', filter: 'url(#shadow)' }, L.base);
+  E('rect', { x: 47, y: 50, width: 761, height: 455, rx: 4, fill: 'url(#panelGrad)' }, L.base);
+  E('rect', { x: 47, y: 50, width: 761, height: 455, rx: 4, fill: 'url(#layers)' }, L.base);
+  E('rect', { x: 47.5, y: 50.5, width: 760, height: 454, rx: 4, fill: 'none', stroke: 'var(--panel-edge)' }, L.base);
+  [['TAMU', 103], ['FORGE', 153]].forEach(([t, x]) => {
+    const a = { 'text-anchor': 'middle', 'font-family': 'var(--font-display)', 'font-size': 44, 'font-weight': 400, 'letter-spacing': 3 };
+    E('text', Object.assign({ transform: `translate(${x + .8} 383.8) rotate(-90)`, fill: 'var(--panel-hi)' }, a), L.base, t);
+    E('text', Object.assign({ transform: `translate(${x} 383) rotate(-90)`, fill: 'var(--panel-ink)' }, a), L.base, t);
+  });
+  E('rect', { x: 168, y: 292, width: 534, height: 181, rx: 2, fill: 'var(--recess)', stroke: 'var(--panel-edge)' }, L.base);
+  E('path', { d: 'M169 472 V293 H701', fill: 'none', stroke: '#000', 'stroke-opacity': .18, 'stroke-width': 2 }, L.base);
+
+  /* ---------- breadboard (2.54 mm = 7.62 units) ---------- */
+  const P = 7.62;
+  const COL = n => 198 + (n - 1) * P;
+  const ROW = { a: 334, b: 341.62, c: 349.24, d: 356.86, e: 364.48, f: 387.34, g: 394.96, h: 402.58, i: 410.2, j: 417.82 };
+  const RAIL = { tp: 311, tn: 318.62, bn: 436.9, bp: 444.52 };
+  const LANE = { p4: 337.81, p3: 345.43, p2: 353.05, p1: 360.67 };
+  const POTC = [COL(37), COL(49), COL(61), COL(73)];
+  const bb = E('g', {}, L.base);
+  E('rect', { x: 186, y: 302, width: 498, height: 155, rx: 3, fill: 'var(--bb)', stroke: 'var(--bb-edge)', filter: 'url(#lift)' }, bb);
+  E('rect', { x: 186, y: 372.6, width: 498, height: 6.6, fill: 'var(--bb-edge)' }, bb);
+  [[306, '#d23b33'], [323.4, '#2d5fd0'], [432.1, '#2d5fd0'], [449.4, '#d23b33']].forEach(([y, c]) =>
+    E('line', { x1: 194, x2: 676, y1: y, y2: y, stroke: c, 'stroke-width': 1, opacity: .75 }, bb));
+  const hole = (x, y) => E('rect', { x: x - 1.25, y: y - 1.25, width: 2.5, height: 2.5, rx: .5, fill: 'var(--hole)', opacity: .55 }, bb);
+  for (let n = 1; n <= 63; n++) {
+    const x = COL(n);
+    Object.values(ROW).forEach(y => hole(x, y));
+    if (n % 6 !== 4) Object.values(RAIL).forEach(y => hole(x, y));
+  }
+  const tiny = { 'font-size': 4.4, 'text-anchor': 'middle', fill: 'var(--hole)', 'font-family': 'var(--font-mono)' };
+  'abcdefghij'.split('').forEach(k => E('text', Object.assign({ x: 679, y: ROW[k] + 1.5 }, tiny), bb, k));
+  [1, 10, 20, 30, 40, 50, 60].forEach(n => E('text', Object.assign({ x: COL(n), y: 428 }, tiny), bb, n));
+  E('text', Object.assign({ x: 190, y: 312.6 }, tiny, { fill: '#d23b33', 'font-size': 6 }), bb, '+');
+  E('text', Object.assign({ x: 190, y: 320.4 }, tiny, { fill: '#2d5fd0', 'font-size': 6 }), bb, '−');
+  E('text', Object.assign({ x: 190, y: 438.6 }, tiny, { fill: '#2d5fd0', 'font-size': 6 }), bb, '−');
+  E('text', Object.assign({ x: 190, y: 446.2 }, tiny, { fill: '#d23b33', 'font-size': 6 }), bb, '+');
+
+  // pot arch mounts (from the CAD)
+  POTC.forEach(cx => {
+    const x = cx - 37.5;
+    E('rect', { x, y: 202, width: 75, height: 83, rx: 7, fill: 'var(--panel-hi)', stroke: 'var(--panel-edge)', filter: 'url(#lift)' }, L.base);
+    E('path', { d: `M${x + 9} 276 V232 a28.5 28.5 0 0 1 57 0 V276 Z`, fill: 'var(--recess)', stroke: 'var(--panel-edge)', 'stroke-width': .8 }, L.base);
+  });
+
+  /* ---------- Mega + RAMPS 1.4 (power terminals on the left, as on the silkscreen) ---------- */
+  const B = L.boards;
+  E('rect', { x: 44, y: 120, width: 26, height: 34, rx: 2, fill: 'url(#metal)', stroke: '#6f747a' }, B); // Mega USB-B
+  E('rect', { x: 62, y: 66, width: 310, height: 164, rx: 5, fill: 'var(--mega)', filter: 'url(#shadow)' }, B);
+  E('rect', { x: 66, y: 58, width: 304, height: 185, rx: 3, fill: 'var(--ramps)', filter: 'url(#lift)' }, B);
+  E('rect', { x: 66.5, y: 58.5, width: 303, height: 184, rx: 3, fill: 'none', stroke: 'var(--ramps-dark)' }, B);
+  const silk = (x, y, t, size = 4, anchor = 'middle', extra = {}, parent = B) =>
+    E('text', Object.assign({ x, y, 'font-size': size, 'text-anchor': anchor, fill: 'var(--silk)', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, extra), parent, t);
+  const header = (x0, y0, cols, rows, pitch = P, parent = B) => {
+    E('rect', { x: x0 - pitch / 2, y: y0 - pitch / 2, width: cols * pitch, height: rows * pitch, rx: .6, fill: '#151515' }, parent);
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++)
+      E('rect', { x: x0 + c * pitch - 1.25, y: y0 + r * pitch - 1.25, width: 2.5, height: 2.5, fill: '#d9b44a' }, parent);
+  };
+
+  silk(72, 66, 'RAMPS 1.4', 5.6, 'start', { 'font-family': 'var(--font-display)', 'font-weight': 600 });
+  // D10 / D9 / D8 outputs
+  E('rect', { x: 68, y: 79, width: 26, height: 87, rx: 1.5, fill: '#2f9e5a', stroke: '#1d6b3b' }, B);
+  [['D10', 81], ['D9', 110], ['D8', 139]].forEach(([t, y0]) => {
+    [y0 + 7, y0 + 20].forEach((y, k) => {
+      E('circle', { cx: 81, cy: y, r: 4.2, fill: 'url(#metal)' }, B);
+      E('line', { x1: 78, y1: y - 3, x2: 84, y2: y + 3, stroke: '#555', 'stroke-width': .8 }, B);
+      silk(98, y + 1.4, k ? '+' : '−', 4.6, 'start');
+    });
+    silk(104, y0 + 15, t, 4.4, 'start');
+    E('line', { x1: 68, x2: 94, y1: y0 + 27.5, y2: y0 + 27.5, stroke: '#1d6b3b', 'stroke-width': .6 }, B);
+  });
+  // power input (MSTBA4): 11A + − then 5A + −
+  E('rect', { x: 68, y: 170, width: 26, height: 66, rx: 1.5, fill: '#2f9e5a', stroke: '#1d6b3b' }, B);
+  const PWR = { a11p: 178.5, a11n: 194.5, a5p: 211.5, a5n: 227.5 };
+  Object.entries(PWR).forEach(([k, y]) => {
+    E('circle', { cx: 81, cy: y, r: 4.6, fill: 'url(#metal)' }, B);
+    E('line', { x1: 77.8, y1: y - 3.2, x2: 84.2, y2: y + 3.2, stroke: '#555', 'stroke-width': .9 }, B);
+    silk(98, y + 1.4, k.endsWith('p') ? '+' : '−', 4.6, 'start');
+  });
+  silk(104, 188, '11A', 4.4, 'start');
+  silk(104, 221, '5A', 4.4, 'start');
+  silk(72, 167.4, '12–35 V IN', 3.4, 'start');
+  // MOSFETs, fuses, diode
+  [[124, 80], [124, 98]].forEach(([x, y]) => { E('rect', { x, y, width: 22, height: 12, rx: 1, fill: '#1b1b1b' }, B); E('rect', { x: x + 22, y: y + 2, width: 4, height: 8, fill: '#a5a9ad' }, B); });
+  E('rect', { x: 126, y: 118, width: 12, height: 26, rx: 1, fill: '#1b1b1b' }, B); E('rect', { x: 128, y: 144, width: 8, height: 4, fill: '#a5a9ad' }, B);
+  silk(150, 88, 'Q1', 3.6, 'start'); silk(150, 106, 'Q2', 3.6, 'start'); silk(141, 132, 'Q3', 3.6, 'start');
+  E('rect', { x: 118, y: 172, width: 7, height: 22, rx: 1.5, fill: '#e7c12a', stroke: '#a88a10' }, B);
+  E('rect', { x: 130, y: 172, width: 7, height: 22, rx: 1.5, fill: '#e7c12a', stroke: '#a88a10' }, B);
+  silk(121.5, 200, 'F1', 3.4); silk(133.5, 200, 'F2', 3.4);
+  E('rect', { x: 144, y: 182, width: 4, height: 11, fill: '#222' }, B); E('rect', { x: 144, y: 190.5, width: 4, height: 1.6, fill: '#ccc' }, B);
+  silk(146, 199, 'D1', 3.4);
+
+  /* driver sockets: Pololu A4988 lies horizontally, 8-pin rows top and bottom */
+  const driver = (cx, cy, label, populated) => {
+    const w = 61, h = 46, x = cx - w / 2, y = cy - h / 2;
+    [cy - 19.05, cy + 19.05].forEach(ry => {
+      E('rect', { x: cx - 30.5, y: ry - 3.4, width: 61, height: 6.8, rx: .6, fill: '#151515' }, B);
+      if (!populated) for (let i = 0; i < 8; i++) E('rect', { x: cx - 26.67 + i * P - 1.25, y: ry - 1.25, width: 2.5, height: 2.5, fill: '#d9b44a' }, B);
+    });
+    if (!populated) { silk(cx, cy + 2, `${label} · empty`, 4.4); return; }
+    const g = E('g', { filter: 'url(#lift)' }, B);
+    E('rect', { x, y, width: w, height: h, rx: 1.5, fill: 'var(--pololu)' }, g);
+    for (let i = 0; i < 8; i++) [cy - 19.05, cy + 19.05].forEach(ry => E('circle', { cx: cx - 26.67 + i * P, cy: ry, r: 1.3, fill: '#d9b44a' }, g));
+    E('rect', { x: cx - 14, y: cy - 11, width: 22, height: 22, rx: 1.5, fill: 'url(#sink)', stroke: '#7d8288', 'stroke-width': .6 }, g);
+    for (let i = 1; i < 5; i++) E('line', { x1: cx - 14 + i * 4.4, y1: cy - 10, x2: cx - 14 + i * 4.4, y2: cy + 10, stroke: '#7d8288', 'stroke-width': .6 }, g);
+    E('circle', { cx: cx + 18, cy, r: 4.2, fill: '#e9e2cf', stroke: '#8f8875', 'stroke-width': .6 }, g);
+    E('line', { x1: cx + 15.4, y1: cy, x2: cx + 20.6, y2: cy, stroke: '#6b6555', 'stroke-width': .9 }, g);
+    E('text', { x: x + 4, y: cy + 2.2, 'font-size': 6.4, fill: '#e9f3ea', 'font-family': 'var(--font-mono)', 'font-weight': 600 }, g, label);
+  };
+  const DRV = { e0: [188.2, 118], e1: [250.6, 118], x: [188.2, 179.5], y: [250.6, 179.5], z: [313, 179.5] };
+  driver(...DRV.e0, 'E0', true);
+  driver(...DRV.e1, 'E1', false);
+  driver(...DRV.x, 'X', true);
+  driver(...DRV.y, 'Y', true);
+  driver(...DRV.z, 'Z', true);
+
+  /* motor headers: 2B 2A 1A 1B (= B− B+ A+ A−) */
+  const MH = { me0: [190.8, 80.9], e1: [261, 80.9], mx: [194.4, 149.4], my: [256.8, 149.4], mz: [319.2, 149.4] };
+  Object.entries(MH).forEach(([k, [cx, y]]) => header(cx - 1.5 * P, y, 4, 1));
+  silk(261, 73.6, 'E1 · 2B 2A 1A 1B', 3.2);
+
+  // reset, servos, AUX-1, AUX-2, AUX-3, AUX-4, endstops, thermistors, I2C
+  E('rect', { x: 166, y: 219, width: 14, height: 14, rx: 1, fill: '#d0d3d6', stroke: '#777' }, B);
+  E('circle', { cx: 173, cy: 226, r: 3.8, fill: '#222' }, B);
+  silk(173, 240, 'RESET', 3.2);
+  header(196, 221.6, 4, 3);                       // servos: D11 D6 D5 D4 / 5V / GND
+  silk(207.4, 215.4, 'SERVOS · unused', 3.2);
+  header(240.8, 228, 4, 2);                       // AUX-1
+  silk(252.2, 222, 'AUX-1', 3.4);
+  const AUXX = [COL(13), COL(14), COL(15), COL(16), COL(17)];
+  const AUXY = { top: 228, bot: 228 + P };
+  header(AUXX[0], AUXY.top, 5, 2);                // AUX-2 (2 x 5)
+  silk(AUXX[2], 217.2, 'AUX-2', 3.8);
+  ['GND', 'A9', 'D40', 'D42', 'A11'].forEach((t, i) => silk(AUXX[i], 222.6, t, 2.5));
+  header(341.4, 228, 4, 2);                       // AUX-3 / SPI
+  silk(352.8, 222, 'AUX-3', 3.4);
+  header(354.4, 100, 2, 14);                      // AUX-4
+  silk(358.2, 95, 'AUX-4', 3.2);
+  header(292.6, 68, 6, 3);                        // endstops: X− X+ Y− Y+ Z− Z+ (D3 D2 D14 D15 D18 D19)
+  silk(311.6, 92.8, 'ENDSTOPS', 3.2);
+  ['X−', 'X+', 'Y−', 'Y+', 'Z−', 'Z+'].forEach((t, i) => silk(292.6 + i * P, 63.4, t, 2.5));
+  header(301, 128, 3, 2, 10);                     // thermistors
+  silk(311, 124, 'T0  T1  T2', 3.2);
+  const I2C = { x: 342.6, y: [66, 66 + P, 66 + 2 * P, 66 + 3 * P] };   // SCL SDA GND 5V
+  header(I2C.x, I2C.y[0], 1, 4);
+  ['21', '20', 'G', '5V'].forEach((t, i) => silk(I2C.x - 5.6, I2C.y[i] + 1, t, 2.6, 'end'));
+  silk(I2C.x, 59.8, 'I²C', 3.6);
+  E('circle', { cx: 361, cy: 213, r: 3.6, fill: 'var(--ramps-dark)', stroke: '#d9b44a', 'stroke-width': 1 }, B);
+
+  /* ---------- LCD ---------- */
+  const lcd = tag(E('g', {}, L.boards), 'lgnd l5v sda scl', 'lcd');
+  E('rect', { x: 530, y: 82, width: 242, height: 106, rx: 3, fill: 'var(--lcd-pcb)', stroke: '#1b5226', filter: 'url(#shadow)' }, lcd);
+  for (let i = 0; i < 16; i++) E('circle', { cx: 566 + i * P, cy: 89, r: 1.8, fill: '#d9b44a' }, lcd);
+  [[537, 90], [765, 90], [537, 180], [765, 180]].forEach(([cx, cy]) => { E('circle', { cx, cy, r: 4.6, fill: '#1b1b1b' }, lcd); E('circle', { cx, cy, r: 1.6, fill: '#555' }, lcd); });
+  E('rect', { x: 552, y: 100, width: 198, height: 72, rx: 2, fill: '#141414' }, lcd);
+  E('rect', { x: 561, y: 109, width: 180, height: 54, rx: 1, fill: 'var(--lcd-screen)' }, lcd);
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 16; c++)
+    E('rect', { x: 565 + c * 10.75, y: 115 + r * 24, width: 9, height: 17, fill: '#ffffff', opacity: .07 }, lcd);
+  ['LPBF POWDER MIX', 'P1 512   B1 B2'].forEach((t, r) => {
+    t.padEnd(16).split('').forEach((ch, c) => {
+      if (ch !== ' ') E('text', { x: 569.5 + c * 10.75, y: 129 + r * 24, 'font-size': 13, 'text-anchor': 'middle', fill: 'var(--lcd-text)', 'font-family': 'var(--font-mono)' }, lcd, ch);
+    });
+  });
+  const BP = { x: 504, y: { lgnd: 116, l5v: 126, sda: 136, scl: 146 } };
+  Object.entries(BP.y).forEach(([k, y]) => {
+    E('rect', { x: 518, y: y - 1, width: 13, height: 2, fill: '#d9b44a' }, lcd);
+    E('rect', { x: 504, y: y - 4, width: 14, height: 8, rx: 1, fill: '#1a1a1a' }, lcd);
+    E('text', { x: 511, y: y - 5.2, 'font-size': 3.6, 'text-anchor': 'middle', fill: '#3c3a34', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, L.labels, { lgnd: 'GND', l5v: 'VCC', sda: 'SDA', scl: 'SCL' }[k]);
+  });
+  E('text', { x: 651, y: 182.5, 'font-size': 5.2, 'text-anchor': 'middle', fill: '#cfe8d3', 'font-family': 'var(--font-mono)' }, lcd, 'I²C BACKPACK ON REAR');
+
+  /* ---------- potentiometers (pins face the breadboard) ---------- */
+  const POT_NET = ['p1', 'p2', 'p3', 'p4'];
+  const POT_PIN = ['A5', 'A9', 'A10', 'A11'];
+  POTC.forEach((cx, i) => {
+    const g = tag(E('g', {}, L.parts), POT_NET[i] + ' 5v gnd', 'pots');
+    const cy = 243;
+    [-2 * P, 0, 2 * P].forEach(dx => E('rect', { x: cx + dx - 2, y: 262, width: 4, height: 26, fill: '#b9bdc2', stroke: '#7d8288', 'stroke-width': .5 }, g));
+    [-2 * P, 0, 2 * P].forEach(dx => E('rect', { x: cx + dx - 3.4, y: 286, width: 6.8, height: 14, rx: 1, fill: '#1a1a1a' }, g));
+    E('circle', { cx, cy, r: 22, fill: '#8f949a', stroke: '#5d6268', filter: 'url(#lift)' }, g);
+    E('circle', { cx, cy, r: 13, fill: 'url(#metal)', stroke: '#6b7076', 'stroke-width': .6 }, g);
+    E('circle', { cx, cy, r: 8.5, fill: '#cfd2d5', stroke: '#6b7076', 'stroke-width': .6 }, g);
+    for (let k = 0; k < 18; k++) {
+      const a = k / 18 * Math.PI * 2;
+      E('line', { x1: cx + Math.cos(a) * 6, y1: cy + Math.sin(a) * 6, x2: cx + Math.cos(a) * 8.5, y2: cy + Math.sin(a) * 8.5, stroke: '#888d92', 'stroke-width': .6 }, g);
+    }
+    E('rect', { x: cx - 4.2, y: cy - 1, width: 8.4, height: 2, fill: '#6b7076' }, g);
+    E('text', { x: cx, y: 214, 'font-size': 7.2, 'text-anchor': 'middle', fill: '#3c3a34', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, g, `POT ${i + 1} · ${POT_PIN[i]}`);
+  });
+
+  /* ---------- push buttons, straddling the centre channel ---------- */
+  const button = (c, net, label, red) => {
+    const x1 = COL(c), x2 = COL(c + 3), cx = (x1 + x2) / 2, cy = (ROW.e + ROW.f) / 2;
+    const g = tag(E('g', {}, L.parts), net + ' 5v', 'buttons');
+    [[x1, ROW.e], [x2, ROW.e], [x1, ROW.f], [x2, ROW.f]].forEach(([x, y]) => E('rect', { x: x - 2, y: y - 2, width: 4, height: 4, fill: '#a5a9ad' }, g));
+    E('rect', { x: cx - 12, y: cy - 11, width: 24, height: 22, rx: 2, fill: '#2a2a2a', stroke: '#111', filter: 'url(#lift)' }, g);
+    E('circle', { cx, cy, r: 8, fill: red ? 'url(#capRed)' : 'url(#cap)', stroke: red ? '#6e1712' : '#14552a' }, g);
+    E('rect', { x: cx - 24, y: 461, width: 48, height: 10, rx: 5, fill: '#ffffff', stroke: '#b9b4a8', 'stroke-width': .6 }, g);
+    E('text', { x: cx, y: 468.2, 'font-size': 6, 'text-anchor': 'middle', fill: '#2a2a2a', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, g, label);
+  };
+  button(17, 'b1', 'RED · D40', true);
+  button(24, 'b2', 'GREEN · D42', false);
+
+  /* 10 kΩ pull-downs, vertical, from the output strip (bottom half) to the bottom − rail */
+  const resistor = (x, y1, y2, nets) => {
+    const g = tag(E('g', {}, L.parts), nets, 'buttons');
+    E('line', { x1: x, y1, x2: x, y2, stroke: '#9ea3a8', 'stroke-width': 1.2 }, g);
+    const my = (y1 + y2) / 2;
+    E('rect', { x: x - 3, y: my - 8, width: 6, height: 16, rx: 2.6, fill: '#dcc79a', stroke: '#a8915e', 'stroke-width': .5 }, g);
+    [['#6b3a1e', -5.4], ['#111', -2.8], ['#e2741c', -.2], ['#c9a43a', 4]].forEach(([c, dy]) => E('rect', { x: x - 3, y: my + dy, width: 6, height: 1.5, fill: c }, g));
+    [y1, y2].forEach(y => E('circle', { cx: x, cy: y, r: 1.5, fill: '#7d8288' }, g));
+    E('text', { x: x + 5, y: my + 1.5, 'font-size': 4, fill: '#57524a', 'font-family': 'var(--font-mono)' }, g, '10k');
+  };
+  resistor(COL(20), ROW.h, RAIL.bn, 'b1 gnd');
+  resistor(COL(27), ROW.h, RAIL.bn, 'b2 gnd');
+
+  /* ---------- wires: straight runs, right-angle bends ---------- */
+  const wire = (pts, color, nets, groups, opts = {}) => {
+    const g = tag(E('g', {}, opts.layer || L.wires), nets, groups);
+    const d = ortho(pts);
+    const w = opts.w || 2.3;
+    E('path', { d, fill: 'none', stroke: '#000', 'stroke-opacity': .45, 'stroke-width': w + 1.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    E('path', { d, fill: 'none', stroke: color, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    E('path', { d, fill: 'none', stroke: '#fff', 'stroke-opacity': .3, 'stroke-width': .6, transform: 'translate(-.45 -.45)' }, g);
+    if (opts.female) { const [x, y] = pts[0]; E('rect', { x: x - 3, y: y - 3, width: 6, height: 6, rx: .8, fill: '#1a1a1a', stroke: '#000', 'stroke-width': .4 }, L.top); }
+    if (opts.male) { const [x, y] = pts[pts.length - 1]; E('circle', { cx: x, cy: y, r: 1.9, fill: '#3a3a3a', stroke: '#c4c8cc', 'stroke-width': .6 }, g); }
+    E('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 8, class: 'hit', 'data-hover': nets.split(' ')[0] }, g);
+    return g;
+  };
+
+  // AUX-2 → breadboard and pots
+  const [A1, A2, A3, A4, A5] = AUXX;
+  const T = AUXY.top, Bt = AUXY.bot;
+  wire([[A1, Bt], [A1, RAIL.tp]], C.red, '5v', 'power', { female: true, male: true });
+  wire([[A1, T], [COL(12), T], [COL(12), RAIL.tn]], C.black, 'gnd', 'power', { female: true, male: true });
+  wire([[A2, Bt], [A2, LANE.p1], [POTC[0], LANE.p1], [POTC[0], 300]], C.orange, 'p1', 'pots', { female: true });
+  wire([[A2, T], [A2 + P / 2, T], [A2 + P / 2, LANE.p2], [POTC[1], LANE.p2], [POTC[1], 300]], C.yellow, 'p2', 'pots', { female: true });
+  wire([[A3, Bt], [A3, LANE.p3], [POTC[2], LANE.p3], [POTC[2], 300]], C.green, 'p3', 'pots', { female: true });
+  wire([[A5, T], [A5, 249], [430, 249], [430, LANE.p4], [POTC[3], LANE.p4], [POTC[3], 300]], C.blue, 'p4', 'pots', { female: true });
+  wire([[A3, T], [A3 + P / 2, T], [A3 + P / 2, 263], [COL(20), 263], [COL(20), ROW.a]], C.purple, 'b1', 'buttons', { female: true, male: true });
+  wire([[A4, T], [A4, 256], [COL(27), 256], [COL(27), ROW.a]], C.pink, 'b2', 'buttons', { female: true, male: true });
+
+  // breadboard jumpers: 5V to button input strips, GND rail bridge
+  wire([[COL(17), RAIL.tp], [COL(17), ROW.a]], C.red, '5v', 'buttons power', { male: true, w: 2 });
+  wire([[COL(24), RAIL.tp], [COL(24), ROW.a]], C.red, '5v', 'buttons power', { male: true, w: 2 });
+  wire([[COL(1), RAIL.tn], [COL(1), RAIL.bn]], C.black, 'gnd', 'buttons power', { male: true, w: 2 });
+
+  // pot outer pins → rails
+  [[0, 35, 39], [1, 47, 51], [2, 59, 63]].forEach(([i, cp, cn]) => {
+    wire([[COL(cp), 300], [COL(cp), RAIL.tp]], C.red, '5v', 'pots power', { male: true, w: 2 });
+    wire([[COL(cn), 300], [COL(cn), RAIL.tn]], C.black, 'gnd', 'pots power', { male: true, w: 2 });
+  });
+  wire([[COL(71), 300], [COL(71), 305], [COL(62), 305], [COL(62), RAIL.tp]], C.red, '5v', 'pots power', { male: true, w: 2 });
+  wire([[COL(75), 300], [COL(75), 326.6], [COL(62), 326.6], [COL(62), RAIL.tn]], C.black, 'gnd', 'pots power', { male: true, w: 2 });
+
+  // I2C → LCD backpack (header order SCL SDA GND 5V, backpack order GND VCC SDA SCL)
+  [['scl', C.white, 0, 484], ['sda', C.teal, 1, 474], ['lgnd', C.black, 2, 460], ['l5v', C.red, 3, 450]].forEach(([n, c, i, lx]) =>
+    wire([[I2C.x, I2C.y[i]], [lx, I2C.y[i]], [lx, BP.y[n]], [BP.x, BP.y[n]]], c, n, 'lcd', { female: true }));
+
+  // 12 V into the 5A pair
+  const pw = tag(E('g', {}, L.wires), '12v', 'power');
+  [[PWR.a5p, C.red], [PWR.a5n, '#1f1f1f']].forEach(([y, c]) => {
+    const d = `M81 ${y} H22`;
+    E('path', { d, stroke: '#000', 'stroke-opacity': .4, 'stroke-width': 4.4, 'stroke-linecap': 'round' }, pw);
+    E('path', { d, stroke: c, 'stroke-width': 3.2, 'stroke-linecap': 'round' }, pw);
+    E('path', { d, stroke: 'transparent', 'stroke-width': 10, class: 'hit', 'data-hover': '12v' }, pw);
+  });
+  E('text', { x: 18, y: 218, 'font-size': 9, 'text-anchor': 'end', fill: 'var(--label)', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, L.labels, '12 V DC');
+  E('text', { x: 18, y: 229, 'font-size': 7.5, 'text-anchor': 'end', fill: 'var(--label)', 'font-family': 'var(--font-mono)', opacity: .75 }, L.labels, 'from PSU');
+
+  /* motor connectors: one DuPont housing per pin, coloured like the lead it carries */
+  const motorPlug = (net, cx, y, label) => {
+    const g = tag(E('g', {}, L.top), net, 'motors');
+    MOTOR_PINS.forEach(([t, c], i) => {
+      const x = cx + (i - 1.5) * P;
+      E('rect', { x: x - 3.4, y: y - 3.4, width: 6.8, height: 6.8, rx: .8, fill: c, stroke: '#000', 'stroke-opacity': .5, 'stroke-width': .5 }, g);
+      E('text', { x, y: y + 1.2, 'font-size': 3, 'text-anchor': 'middle', fill: '#fff', 'font-family': 'var(--font-mono)', 'font-weight': 600 }, g, t);
+    });
+    E('rect', { x: cx + 2 * P + .5, y: y - 3.4, width: 22, height: 6.8, rx: 3.4, fill: '#ffffff', stroke: '#888', 'stroke-width': .4 }, g);
+    E('text', { x: cx + 2 * P + 11.5, y: y + 1.3, 'font-size': 3.6, 'text-anchor': 'middle', fill: '#222', 'font-family': 'var(--font-mono)', 'font-weight': 600 }, g, label);
+    E('rect', { x: cx - 2 * P, y: y - 4, width: 4 * P + 23, height: 8, fill: 'transparent', class: 'hit', 'data-hover': net }, g);
+  };
+  motorPlug('me0', MH.me0[0], MH.me0[1], 'MOTOR E0');
+  motorPlug('mx', MH.mx[0], MH.mx[1], 'MOTOR X');
+  motorPlug('my', MH.my[0], MH.my[1], 'MOTOR Y');
+  motorPlug('mz', MH.mz[0], MH.mz[1], 'MOTOR Z');
+
+  E('text', { x: 651, y: 74, 'font-size': 9, 'text-anchor': 'middle', fill: '#57524a', 'font-family': 'var(--font-mono)', 'font-weight': 500 }, L.labels, '16×2 LCD · I²C');
+  E('text', { x: 435, y: 490, 'font-size': 8, 'text-anchor': 'middle', fill: '#6e695e', 'font-family': 'var(--font-mono)' }, L.labels, '830-POINT BREADBOARD · TOP RAILS + / −, BOTTOM RAILS − / +');
+
+  /* ---------- views ---------- */
+  const VIEWS = { whole: '-64 4 900 520', ramps: '38 44 362 209', bb: '176 196 620 358' };
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+    svg.setAttribute('viewBox', VIEWS[b.dataset.view]);
+    document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+
+  /* ---------- interaction ---------- */
+  const readout = document.getElementById('readout');
+  let group = 'all', hover = null;
+  const netEls = [...svg.querySelectorAll('.net')];
+  const rows = () => [...document.querySelectorAll('tbody tr[data-net]')];
+  const apply = () => {
+    let on = null;
+    if (hover) on = el => el.dataset.nets.split(' ').includes(hover);
+    else if (group !== 'all') on = el => el.dataset.groups.split(' ').includes(group);
+    svg.classList.toggle('focusing', !!on);
+    netEls.forEach(el => el.classList.toggle('on', !!on && on(el)));
+    rows().forEach(r => r.classList.toggle('on', !!hover && r.dataset.net === hover));
+    if (hover) {
+      const n = NETS[hover];
+      readout.innerHTML = `<b>${n.name}</b> · ${n.hdr} · <b>${n.pin}</b> → ${n.to}`;
+    } else readout.textContent = 'Hover any wire to read its connection.';
+  };
+  svg.addEventListener('pointerover', e => { const h = e.target.closest('[data-hover]'); if (h) { hover = h.dataset.hover; apply(); } });
+  svg.addEventListener('pointerout', e => { if (e.target.closest('[data-hover]')) { hover = null; apply(); } });
+  document.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => {
+    group = b.dataset.group;
+    document.querySelectorAll('[data-group]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    apply();
+  }));
+
+  /* ---------- tables ---------- */
+  const tbody = document.querySelector('#nets tbody');
+  const swatch = c => `<span class="sw" style="background:${c}"></span>`;
+  const motorSw = MOTOR_PINS.map(([, c]) => `<span class="sw" style="background:${c};width:6px;margin-right:1px"></span>`).join('');
+  [['power', 'Power'], ['pots', 'Potentiometers'], ['buttons', 'Push buttons'], ['lcd', 'LCD (I²C)'], ['motors', 'Stepper motors']].forEach(([g, title]) => {
+    tbody.insertAdjacentHTML('beforeend', `<tr class="grp"><td colspan="5">${title}</td></tr>`);
+    Object.entries(NETS).filter(([, n]) => n.group === g).forEach(([id, n]) => {
+      tbody.insertAdjacentHTML('beforeend', `<tr data-net="${id}" tabindex="0"><td>${g === 'motors' ? motorSw : swatch(n.color)}</td><td>${n.name}</td><td>${n.hdr}</td><td class="mono">${n.pin}</td><td>${n.to}</td></tr>`);
+    });
+  });
+  document.getElementById('i2c').innerHTML = [['scl', 'SCL (21)', 'D21', 'SCL'], ['sda', 'SDA (20)', 'D20', 'SDA'], ['lgnd', 'GND', 'GND', 'GND'], ['l5v', '5V', '5V', 'VCC']]
+    .map(([id, a, b, c]) => `<tr data-net="${id}" tabindex="0"><td>${swatch(NETS[id].color)}</td><td>${a}</td><td class="mono">${b}</td><td>${c}</td></tr>`).join('');
+  document.getElementById('drv').innerHTML = [
+    ['X', 'D54 (A0)', 'D55 (A1)', 'D38', 'mx'], ['Y', 'D60 (A6)', 'D61 (A7)', 'D56 (A2)', 'my'],
+    ['Z', 'D46', 'D48', 'D62 (A8)', 'mz'], ['E0', 'D26', 'D28', 'D24', 'me0']
+  ].map(([s, a, b, c, id]) => `<tr data-net="${id}" tabindex="0"><td class="mono"><b>${s}</b></td><td class="mono">${a}</td><td class="mono">${b}</td><td class="mono">${c}</td><td>${motorSw}</td><td class="mono">0.45 V → 0.83 A</td></tr>`).join('');
+  rows().forEach(r => {
+    const on = () => { hover = r.dataset.net; apply(); };
+    const off = () => { hover = null; apply(); };
+    r.addEventListener('mouseenter', on); r.addEventListener('mouseleave', off);
+    r.addEventListener('focus', on); r.addEventListener('blur', off);
+  });
+
+  /* AUX-2 card: 2 rows x 5 columns, as printed */
+  const aux = document.getElementById('aux');
+  const A = (t, a, s) => E(t, a, aux, s);
+  const GRID = [
+    [['GND', 'gnd'], ['A9 · D63', 'p2'], ['D40', 'b1'], ['D42', 'b2'], ['A11 · D65', 'p4']],
+    [['5V', '5v'], ['A5 · D59', 'p1'], ['A10 · D64', 'p3'], ['D44', null], ['A12 · D66', null]]
+  ];
+  A('rect', { x: 66, y: 64, width: 210, height: 46, rx: 4, fill: '#161616' });
+  GRID.forEach((row, r) => row.forEach(([lab, net], c) => {
+    const x = 92 + c * 40, y = 76 + r * 22;
+    const color = net ? NETS[net].color : null;
+    if (color) A('line', { x1: x, y1: y, x2: x, y2: r ? 136 : 40, stroke: color, 'stroke-width': 5, 'stroke-linecap': 'round' });
+    A('rect', { x: x - 5, y: y - 5, width: 10, height: 10, fill: '#d9b44a' });
+    const ty = r ? 154 : 22;
+    A('text', { x, y: ty, 'text-anchor': 'middle', fill: net ? 'var(--fg)' : 'var(--muted)', 'font-family': 'var(--font-mono)', 'font-size': 10.5, 'font-weight': 500 }, lab);
+    A('text', { x, y: ty + (r ? 13 : -10) + (r ? 0 : 0), 'text-anchor': 'middle', fill: 'var(--muted)', 'font-family': 'var(--font-body)', 'font-size': 9.5 }, net ? (NETS[net].group === 'power' ? 'rail' : NETS[net].name.replace(' wiper', '')) : 'spare');
+  }));
+  A('text', { x: 58, y: 80, 'text-anchor': 'end', fill: 'var(--muted)', 'font-family': 'var(--font-mono)', 'font-size': 9 }, 'top');
+  A('text', { x: 58, y: 102, 'text-anchor': 'end', fill: 'var(--muted)', 'font-family': 'var(--font-mono)', 'font-size': 9 }, 'edge');
+
+  apply();
+})();
+</script>

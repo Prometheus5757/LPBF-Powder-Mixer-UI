@@ -1,0 +1,7 @@
+* text=auto
+*.bat   text eol=crlf
+*.glb   binary
+*.step  binary
+*.stp   binary
+*.pdf   binary
+*.wasm  binary

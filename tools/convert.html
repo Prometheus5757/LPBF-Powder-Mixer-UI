@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>STEP → GLB converter</title>
+<style>
+  body { font: 14px/1.5 "Segoe UI", system-ui, sans-serif; margin: 24px; background: #f4f5f5; color: #15191c; }
+  pre { background: #fff; border: 1px solid #ccd; padding: 12px; max-height: 70vh; overflow: auto; font: 12px Consolas, monospace; }
+  label { margin-right: 14px; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/ui/vendor/three/three.module.js", "three/addons/": "/ui/vendor/three/addons/" } }
+</script>
+<script src="/ui/vendor/occt/occt-import-js.js"></script>
+</head>
+<body>
+<h1>STEP → GLB converter</h1>
+<p>Reads <code>FullDesign.step</code>, tessellates it with OpenCascade, and saves <code>ui/assets/assembly.glb</code> plus a component tree for the viewer.</p>
+<p>
+  <label>Linear deflection (ratio of model size) <input id="lin" type="number" value="0.0008" step="0.0001"></label>
+  <label>Angular deflection (rad) <input id="ang" type="number" value="0.6" step="0.05"></label>
+  <button id="go">Convert</button>
+</p>
+<pre id="out">Ready.</pre>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+const out = document.getElementById('out');
+const log = s => { out.textContent += '\n' + s; out.scrollTop = out.scrollHeight; };
+
+async function convert() {
+  out.textContent = 'Loading OpenCascade…';
+  const t0 = performance.now();
+  const occt = await occtimportjs({ locateFile: f => '/ui/vendor/occt/' + f });
+  log('Fetching FullDesign.step…');
+  const buf = new Uint8Array(await (await fetch('/FullDesign.step')).arrayBuffer());
+  log(`  ${(buf.length / 1e6).toFixed(1)} MB. Tessellating…`);
+  const res = occt.ReadStepFile(buf, {
+    linearUnit: 'millimeter',
+    linearDeflectionType: 'bounding_box_ratio',
+    linearDeflection: Number(document.getElementById('lin').value),
+    angularDeflection: Number(document.getElementById('ang').value)
+  });
+  if (!res.success) { log('STEP read failed'); return; }
+  log(`  ${res.meshes.length} meshes in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+
+  // materials shared by colour
+  const mats = new Map();
+  const matFor = c => {
+    const key = c ? c.map(v => v.toFixed(3)).join(',') : 'none';
+    if (!mats.has(key)) {
+      const color = c ? new THREE.Color(c[0], c[1], c[2]) : new THREE.Color(0.62, 0.64, 0.66);
+      mats.set(key, new THREE.MeshStandardMaterial({ color, metalness: 0.1, roughness: 0.6, name: 'm' + mats.size }));
+    }
+    return mats.get(key);
+  };
+
+  let tris = 0;
+  const tree = [];
+  function build(node, depth, path) {
+    const g = new THREE.Group();
+    g.name = node.name || 'node';
+    const p = path ? path + ' / ' + g.name : g.name;
+    tree.push('  '.repeat(depth) + g.name + (node.meshes.length ? `  [${node.meshes.length} mesh]` : ''));
+    for (const mi of node.meshes) {
+      const m = res.meshes[mi];
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(m.attributes.position.array, 3));
+      if (m.attributes.normal) geo.setAttribute('normal', new THREE.Float32BufferAttribute(m.attributes.normal.array, 3));
+      const idx = m.index.array;
+      const maxIndex = m.attributes.position.array.length / 3;
+      geo.setIndex(maxIndex < 65535 ? new THREE.Uint16BufferAttribute(idx, 1) : new THREE.Uint32BufferAttribute(idx, 1));
+      if (!m.attributes.normal) geo.computeVertexNormals();
+      tris += idx.length / 3;
+      const mesh = new THREE.Mesh(geo, matFor(m.color));
+      mesh.name = m.name || g.name;
+      g.add(mesh);
+    }
+    for (const c of node.children) g.add(build(c, depth + 1, p));
+    return g;
+  }
+  const scene = new THREE.Scene();
+  const root = build(res.root, 0, '');
+  root.name = 'assembly';
+  scene.add(root);
+  log(`  ${Math.round(tris).toLocaleString()} triangles, ${mats.size} materials`);
+
+  log('Exporting GLB…');
+  const glb = await new GLTFExporter().parseAsync(scene, { binary: true });
+  log(`  ${(glb.byteLength / 1e6).toFixed(1)} MB`);
+  for (const [name, body] of [['assembly.glb', glb], ['assembly-tree.json', JSON.stringify({ tree }, null, 1)]]) {
+    const r = await fetch('/__save?name=' + name, { method: 'POST', body });
+    log('  ' + await r.text());
+  }
+  log(`Done in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
+  window.__done = true;
+}
+document.getElementById('go').addEventListener('click', () => convert().catch(e => { log('ERROR ' + e.stack); window.__done = 'error'; }));
+</script>
+</body>
+</html>

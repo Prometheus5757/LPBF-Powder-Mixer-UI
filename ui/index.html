@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LPBF Powder Mixer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+  </script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div>
+        <div class="brand-name">LPBF Powder Mixer</div>
+        <div class="brand-sub">TAMU FORGE · four-canister dispenser</div>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a class="tab" href="#dispense" data-tab="dispense">Dispense</a>
+      <a class="tab" href="#calibrate" data-tab="calibrate">Calibrate</a>
+      <a class="tab" href="#clean" data-tab="clean">Clean<span class="tab-dot" id="cleanDot" hidden></span></a>
+      <a class="tab" href="#device" data-tab="device">Device</a>
+      <a class="tab" href="#reference" data-tab="reference">Reference</a>
+    </nav>
+    <div class="conn">
+      <span class="pill" id="connPill" data-state="off"><span class="dot"></span><span id="connText">Not connected</span></span>
+      <button id="btnConnect" class="btn primary">Connect Mega</button>
+      <button id="btnSim" class="btn">Use simulator</button>
+      <button id="btnDisconnect" class="btn" hidden>Disconnect</button>
+    </div>
+  </header>
+
+  <div class="motion-bar" id="motionBar" hidden role="status">
+    <span class="spinner" aria-hidden="true"></span>
+    <span id="motionText">Motors moving</span>
+    <button id="motionStop" class="btn danger">Stop motors</button>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+
+  <main class="layout" id="app" data-conn="off">
+    <div class="content">
+
+      <!-- ===================== DISPENSE ===================== -->
+      <div class="view" data-view="dispense">
+        <section class="card mix" aria-labelledby="mixTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="mixTitle">Powder ratios</h2>
+              <p class="sub">Set each canister from 0 to 100 with its dial or here. The run scales the four values into shares.</p>
+            </div>
+            <button id="btnReset" class="btn quiet small" disabled>Reset all to 0</button>
+          </div>
+          <ol class="steps" id="steps" aria-label="Setup progress"></ol>
+          <div class="sharebar-wrap">
+            <div class="sharebar" id="shareBar" role="img" aria-label="Mix shares"></div>
+            <div class="sharebar-legend" id="shareLegend"></div>
+          </div>
+          <div class="motors" id="motors"></div>
+        </section>
+
+        <section class="card run" aria-labelledby="runTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="runTitle">Run</h2>
+              <p class="sub">Every motor turns at a speed proportional to its ratio. The largest ratio runs at the top speed.</p>
+            </div>
+            <button id="btnStop" class="btn danger" hidden>Stop run</button>
+          </div>
+          <div class="run-settings">
+            <label class="field">
+              <span>Run duration</span>
+              <span class="input-unit"><input id="inDur" type="number" min="1" max="3600" step="1" inputmode="numeric"><em>s</em></span>
+            </label>
+            <label class="field">
+              <span>Top speed (output shaft)</span>
+              <span class="input-unit"><input id="inTop" type="number" min="0.1" max="300" step="0.1" inputmode="decimal"><em>rpm</em></span>
+              <small id="topNote" class="note"></small>
+            </label>
+            <div class="progress-block">
+              <div class="progress-top"><span id="runStateText">Not running</span><span id="runTimeText" class="mono"></span></div>
+              <div class="progress"><div id="runBar"></div></div>
+            </div>
+          </div>
+          <div class="tablewrap">
+            <table class="plan">
+              <thead>
+                <tr><th>Canister</th><th class="num">Ratio</th><th class="num">Share</th><th class="num">Speed</th><th class="num">Revolutions</th><th class="num">Est. mass</th><th class="num">Mass share</th></tr>
+              </thead>
+              <tbody id="planBody"></tbody>
+              <tfoot id="planFoot"></tfoot>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===================== CALIBRATE ===================== -->
+      <div class="view" data-view="calibrate" hidden>
+        <section class="card" aria-labelledby="trialTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="trialTitle">Record a trial</h2>
+              <p class="sub">After a dispense run, weigh what each canister put out and enter it here. Each entry adds a grams-per-revolution point at the speed that canister ran.</p>
+            </div>
+          </div>
+          <p class="empty" id="trialEmpty">No finished run to record yet. Run a mix on the Dispense tab, then come back here to enter the weighed masses.</p>
+          <form class="trial" id="trialForm" hidden>
+            <div class="trial-rows" id="trialRows"></div>
+            <div class="trial-actions"><button type="submit" class="btn primary">Save trial</button><span class="note" id="trialMsg" role="status"></span></div>
+          </form>
+        </section>
+
+        <section class="card calib" aria-labelledby="calTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="calTitle">Calibration curves</h2>
+              <p class="sub">Grams per output revolution against speed, for each canister. Stored in this browser. Mass estimates appear once a canister has at least one trial.</p>
+            </div>
+            <button id="btnExport" class="btn">Export CSV</button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </section>
+      </div>
+
+      <!-- ===================== CLEAN ===================== -->
+      <div class="view" data-view="clean" hidden>
+        <section class="card clean-card" aria-labelledby="cleanTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="cleanTitle">Clean dispensers</h2>
+              <p class="sub">Empties leftover powder by spinning the dispenser at full speed until you stop it.</p>
+            </div>
+            <span class="speed-chip" id="cleanSpeed">—</span>
+          </div>
+
+          <ol class="prep">
+            <li><b>1</b><span>Detach the powder canister from the dispenser.</span></li>
+            <li><b>2</b><span>Put a catch tray or bag under the outlet.</span></li>
+            <li><b>3</b><span>Pick the dispensers to empty and start. Stop once nothing more comes out, and run it again if you still see powder.</span></li>
+          </ol>
+
+          <label class="confirm" for="cleanReady">
+            <input type="checkbox" id="cleanReady">
+            <span>The canister is detached and the outlet is over a catch tray.</span>
+          </label>
+
+          <div class="clean-select-head">
+            <h3>Dispensers to empty</h3>
+            <div class="row-actions">
+              <button class="btn quiet small" id="cleanAll">Select all</button>
+              <button class="btn quiet small" id="cleanNone">Clear</button>
+            </div>
+          </div>
+          <div class="clean-motors" id="cleanMotors"></div>
+
+          <div class="clean-actions">
+            <div class="clean-timer">
+              <span class="clean-time mono" id="cleanTime">0:00</span>
+              <span class="note" id="cleanTimeLabel">Not running</span>
+            </div>
+            <div class="clean-buttons">
+              <button id="cleanStart" class="btn go big" disabled>Start cleaning</button>
+              <button id="cleanStop" class="btn danger big" disabled>Stop</button>
+            </div>
+          </div>
+          <p class="note" id="cleanNote" role="status"></p>
+        </section>
+
+        <section class="card" aria-labelledby="histTitle">
+          <div class="card-head tight">
+            <h2 id="histTitle">Cleaning passes</h2>
+            <button class="btn quiet small" id="cleanClearHist">Clear list</button>
+          </div>
+          <p class="empty" id="histEmpty">No cleaning passes yet.</p>
+          <div class="tablewrap">
+            <table id="histTable" hidden>
+              <thead><tr><th>Started</th><th>Dispensers</th><th class="num">Duration</th><th class="num">Revolutions</th><th>Ended by</th></tr></thead>
+              <tbody id="histBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===================== DEVICE ===================== -->
+      <div class="view" data-view="device" hidden>
+        <section class="card settings" aria-labelledby="setTitle">
+          <div class="card-head tight"><h2 id="setTitle">Drive settings</h2><span class="note">Stored in the Mega's EEPROM</span></div>
+          <div class="settings-grid">
+            <label class="field">
+              <span>Microstepping</span>
+              <select id="inMs">
+                <option value="1">Full step</option><option value="2">1/2</option><option value="4">1/4</option>
+                <option value="8">1/8</option><option value="16">1/16</option>
+              </select>
+              <small class="note">Must match the MS1–MS3 jumpers under the drivers. All three fitted = 1/16.</small>
+            </label>
+            <label class="field">
+              <span>Gearbox ratio</span>
+              <span class="input-unit"><input id="inGear" type="number" min="1" max="100" step="0.01" inputmode="decimal"><em>: 1</em></span>
+              <small class="note">The 17HS15-1684S-PG5 has a 5.18 : 1 planetary gearbox.</small>
+            </label>
+            <fieldset class="field">
+              <legend>Reverse direction</legend>
+              <div class="checks" id="invChecks"></div>
+              <small class="note">Applies to dispensing and cleaning.</small>
+            </fieldset>
+          </div>
+          <dl class="facts" id="facts"></dl>
+        </section>
+
+        <section class="card log" aria-labelledby="logTitle">
+          <div class="card-head tight">
+            <h2 id="logTitle">Device log</h2>
+            <button id="btnClearLog" class="btn quiet small">Clear</button>
+          </div>
+          <ol class="log-list" id="logList" aria-live="polite"></ol>
+          <form class="cmd" id="cmdForm">
+            <label for="cmdIn" class="visually-hidden">Send a command</label>
+            <input id="cmdIn" autocomplete="off" spellcheck="false" placeholder="Command, e.g. SET 2 40 or CLEAN 1">
+            <button class="btn" type="submit">Send</button>
+          </form>
+        </section>
+      </div>
+      <!-- ===================== REFERENCE ===================== -->
+      <div class="view" data-view="reference" hidden>
+        <div class="ref">
+          <nav class="ref-nav" aria-label="Documents">
+            <h2>Reference</h2>
+            <p class="sub">Wiring, power and board documentation for this build, read straight from the project folder.</p>
+            <ul id="refList"></ul>
+          </nav>
+          <section class="card ref-doc" aria-live="polite">
+            <div class="ref-head">
+              <div>
+                <div class="ref-kind" id="refKind"></div>
+                <h2 id="refTitle">Document</h2>
+                <p class="note mono" id="refFile"></p>
+              </div>
+              <a class="btn small" id="refOpen" href="#" target="_blank" rel="noopener">Open in new tab</a>
+            </div>
+            <p class="ref-note" id="refNote" hidden></p>
+            <div class="ref-body" id="refBody"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PANEL (always visible) ===================== -->
+    <aside class="side">
+      <section class="card v3d-card" aria-labelledby="v3dTitle">
+        <div class="card-head tight">
+          <h2 id="v3dTitle">Assembly</h2>
+          <button class="btn quiet small" id="v3dOverview">Overview</button>
+        </div>
+        <div class="v3d" id="v3d">
+          <div class="v3d-loading" id="v3dLoading"><span>Loading 3D model…</span><div class="progress"><div id="v3dBar"></div></div></div>
+        </div>
+        <p class="v3d-caption" id="v3dCaption">Whole machine</p>
+        <details class="v3d-fix">
+          <summary>Motor numbering looks wrong?</summary>
+          <div class="v3d-fix-row">
+            <label for="v3dA" class="visually-hidden">First motor</label>
+            <select id="v3dA"><option value="0">M1 · X</option><option value="1">M2 · Y</option><option value="2">M3 · Z</option><option value="3">M4 · E0</option></select>
+            <span>swap with</span>
+            <label for="v3dB" class="visually-hidden">Second motor</label>
+            <select id="v3dB"><option value="0">M1 · X</option><option value="1" selected>M2 · Y</option><option value="2">M3 · Z</option><option value="3">M4 · E0</option></select>
+            <button class="btn small" id="v3dSwap">Swap</button>
+            <button class="btn quiet small" id="v3dResetOrder">Reset</button>
+          </div>
+          <p class="note">Click a motor in the view to select it on the current tab.</p>
+        </details>
+      </section>
+
+      <section class="card panel" aria-labelledby="panelTitle">
+        <div class="card-head tight">
+          <h2 id="panelTitle">Control panel</h2>
+          <span class="state-chip" id="stateChip">Offline</span>
+        </div>
+        <div class="lcd-bezel"><div class="lcd" id="lcd" role="img" aria-label="LCD contents"></div></div>
+        <p class="hint" id="hint">Connect the Mega over USB, or start the simulator to try the workflow.</p>
+        <div class="hw-buttons">
+          <button id="btnNext" class="hw red" disabled>
+            <span class="cap" aria-hidden="true"></span>
+            <span class="txt"><b id="nextLabel">Confirm motor 1</b><small>Same as the red button</small></span>
+          </button>
+          <button id="btnGo" class="hw green" disabled>
+            <span class="cap" aria-hidden="true"></span>
+            <span class="txt"><b id="goLabel">Start run</b><small>Same as the green button</small></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card sim" id="simPanel" hidden aria-labelledby="simTitle">
+        <div class="card-head tight">
+          <h2 id="simTitle">Virtual panel</h2>
+          <span class="tag">Simulator</span>
+        </div>
+        <p class="sub">These stand in for the physical dials and buttons while no Mega is connected.</p>
+        <div class="sim-pots" id="simPots"></div>
+        <div class="sim-buttons">
+          <button class="phys red" id="simRed" aria-label="Press the red button"><span></span>Red</button>
+          <button class="phys green" id="simGreen" aria-label="Press the green button"><span></span>Green</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
